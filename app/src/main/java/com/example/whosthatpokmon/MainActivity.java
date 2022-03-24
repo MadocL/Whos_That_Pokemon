@@ -38,6 +38,8 @@ public class MainActivity extends AppCompatActivity{
     int combo = 0;
     String name;
     Random random = new Random();
+
+    //pour detecter les string similaires
     SimilarityStrategy strategy = new JaroWinklerStrategy();
     StringSimilarityService service = new StringSimilarityServiceImpl(strategy);
 
@@ -90,6 +92,7 @@ public class MainActivity extends AppCompatActivity{
                         Toast.LENGTH_SHORT
                 ).show();
             }
+            //mauvaise saisie
             else {
                 Toast.makeText(getApplicationContext(), "Nop", Toast.LENGTH_SHORT).show();
                 combo = 0;
@@ -114,18 +117,21 @@ public class MainActivity extends AppCompatActivity{
         ((TextView)findViewById(R.id.combo)).setText("Combo : " + combo);
     }
 
+    //setup la nouvelle partie
     @RequiresApi(api = Build.VERSION_CODES.O)
     public void newGame() throws IOException {
-        int randomPkm = random.nextInt(NB_POKEMON) + 1;
+        int randomPkm = random.nextInt(NB_POKEMON) + 1; //numero du pokemon a trouver
         name = getNameFromAPI(randomPkm);
         Bitmap artwork = getArtworkFromAPI(randomPkm);
         ((ImageView)findViewById(R.id.imageView)).setImageBitmap(getSilhouette(artwork));
     }
 
+    //normalise la string en caractere ascii (suppression des eventuels accents/tremas)
     public static String normalizeText(String src){
         return Normalizer.normalize(src, Normalizer.Form.NFD).replaceAll("[^\\p{ASCII}]", "");
     }
 
+    //recupere par requete http le nom du pokemon lie au numero donne
     public static String getNameFromAPI(int randomPkm) throws IOException {
         URL url = new URL("https://pokeapi.co/api/v2/pokemon-species/" + randomPkm);
         String name;
@@ -140,6 +146,7 @@ public class MainActivity extends AppCompatActivity{
         return name;
     }
 
+    //parser pour le fichier json de l'api PokeApi (ne recupere que le nom francais)
     public static String readJsonStream(InputStream in) throws IOException {
         JsonReader reader = new JsonReader(new InputStreamReader(in, StandardCharsets.UTF_8));
         String name = null;
@@ -179,12 +186,12 @@ public class MainActivity extends AppCompatActivity{
         return name;
     }
 
+    //recupere l'artwork officiel du pokemon de numero donne
     public static Bitmap getArtworkFromAPI(int randomPkm) throws IOException {
-        Bitmap artwork;
         URL url = new URL("https://raw.githubusercontent.com/PokeAPI/" +
                 "sprites/master/sprites/pokemon/other/official-artwork/" +
                 randomPkm + ".png");
-
+        Bitmap artwork;
         HttpURLConnection urlConnection = (HttpURLConnection) url.openConnection();
         try {
             InputStream in = new BufferedInputStream(urlConnection.getInputStream());
@@ -194,19 +201,31 @@ public class MainActivity extends AppCompatActivity{
         }
         return artwork;
     }
-    
+
+    //retourne une nouvelle image silhouette a partir de l'artwork donne
+    //si le pixel est transparent (valeur alpha) alors mmetre a blanc, s'il est opaque alors mettre a noir
     @RequiresApi(api = Build.VERSION_CODES.O)
     public static Bitmap getSilhouette(Bitmap artwork){
         Bitmap silhouette;
-        int pixelsBound = artwork.getWidth()* artwork.getHeight();
+        int pixelsBound = artwork.getWidth()* artwork.getHeight(); //nombre de pixels de l'artwork
         int[] pixels = new int[pixelsBound];
         artwork.getPixels(pixels, 0, artwork.getWidth(), 0, 0, artwork.getWidth(), artwork.getHeight());
-        for(int i = 0; i < pixelsBound; i++){
 
-            if(Color.alpha(pixels[i]) == 0) pixels[i] = Color.rgb(255, 255, 255);
-            else pixels[i] = Color.rgb(0, 0, 0);
+        for(int i = 0; i < pixelsBound; i++)
+        {
+            if(Color.alpha(pixels[i]) == 0)
+                pixels[i] = Color.rgb(255, 255, 255);
+            else
+                pixels[i] = Color.rgb(0, 0, 0);
         }
-        silhouette = Bitmap.createBitmap(pixels, 0, artwork.getWidth(), artwork.getWidth(), artwork.getHeight(), artwork.getConfig());
+        silhouette = Bitmap.createBitmap(
+                pixels,
+                0,
+                artwork.getWidth(),
+                artwork.getWidth(),
+                artwork.getHeight(),
+                artwork.getConfig()
+        );
         return silhouette;
     }
 }
